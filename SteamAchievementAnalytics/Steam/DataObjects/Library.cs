@@ -1,4 +1,6 @@
-﻿namespace SteamAchievmentAnalytics.Steam.DataObjects;
+﻿using System.Linq;
+
+namespace SteamAchievmentAnalytics.Steam.DataObjects;
 
 public class Library
 {
@@ -9,62 +11,35 @@ public class Library
 
     public List<Game> Games { get; set; }
 
-    public int StartedGames()
+    public float? TotalCompletion()
+        => Games.Where(g => g.Completion is not null && g.Completion != 0F).Average(g => g.Completion ?? 0);
+
+    public List<string> TotalNames()
+        => Games.ConvertAll<string>(g => g.Name);
+
+    public List<string> TotalStartedNames()
+        => Games.Where(g => g.Completion > 0F).ToList().ConvertAll<string>(g => g.Name);
+
+    public float? CompletionByName(string name)
+        => Games.First(g => g.Name == name).Completion;
+
+    public List<string> TotalNamesSortedByCompletion(bool asc)
+        => GamesSortedByCompletion(asc).ConvertAll<string>(g => g.Name);
+
+    public List<string> TotalStartedNamesSortedByCompletion(bool asc)
+        => GamesSortedByCompletion(asc).Where(g => g.Completion > 0F).ToList().ConvertAll<string>(g => g.Name);
+
+    private List<Game> GamesSortedByCompletion(bool asc)
     {
-        int gameCount = Games.Count;
-        float totalCompletion = 0F;
-        foreach (Game game in Games)
+        var copy = new Game[Games.Count];
+        Games.CopyTo(copy);
+        var list = copy.ToList();
+        list.Sort((g1, g2) =>
         {
-            float completion = game.Completion();
-            if (completion == 0F)
-                gameCount--;
-        }
-
-        return gameCount;
+            if (g1.Completion < g2.Completion) return asc ? -1 : 1;
+            if (g1.Completion > g2.Completion) return asc ? 1 : -1;
+            return 0;
+        });
+        return list;
     }
-
-    public float TotalCompletion()
-    {
-        int gameCount = Games.Count;
-        float totalCompletion = 0F;
-        foreach (Game game in Games)
-        {
-            float completion = game.Completion();
-            if (completion == 0F)
-            {
-                gameCount--;
-                continue;
-            }
-
-            totalCompletion += completion;
-        }
-
-        return totalCompletion / gameCount;
-    }
-
-    public List<string> AllNames()
-    {
-        List<string> names = new List<string>();
-        Games.ForEach(g => names.Add(g.Name));
-        return names;
-    }
-
-    public List<string> AllStartedNames()
-    {
-        List<string> names = new List<string>();
-        foreach (Game game in Games.Where(g => g.Completion() > 0F))
-        {
-            if (game.Id == 791180)
-            {
-                throw new Exception();
-            }
-
-            names.Add(game.Name);
-        }
-
-        return names;
-    }
-
-    public float CompletionByName(string name)
-        => Games.Where(g => g.Name == name).First().Completion();
 }

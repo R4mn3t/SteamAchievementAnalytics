@@ -12,7 +12,7 @@ namespace SteamAchievmentAnalytics
             public static string GetGameAchievementUrl(string apiKey, string userId, string appId)
                 => string.Format(gameAchievmentsUrl, apiKey, userId, appId);
             private static string userGamesUrl =
-                "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={0}&steamid={1}";
+                "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={0}&steamid={1}&skip_unvetted_apps=false&include_played_free_games=1";
             public static string GetUserGamesUrl(string apiKey, string userId)
                 => string.Format(userGamesUrl, apiKey, userId);
             private static string globalAchievmentUrl =

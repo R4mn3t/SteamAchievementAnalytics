@@ -49,10 +49,9 @@ internal class Program
         library = JsonConvert.DeserializeObject<Library>(sr.ReadToEnd()) ?? new Library();
         if (library.Equals(new Library()))
             return;
-        Console.WriteLine(library.StartedGames());
-        float value = library.TotalCompletion();
+        float? value = library.TotalCompletion();
         using StreamWriter sw = new StreamWriter("games.txt");
-        var names = library.AllStartedNames();
+        var names = library.TotalStartedNamesSortedByCompletion(false);
         foreach (string name in names)
         {
             sw.WriteLine(string.Format("{0}:{1}", name, library.CompletionByName(name)));
