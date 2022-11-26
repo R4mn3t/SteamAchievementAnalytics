@@ -95,13 +95,6 @@ internal class Program
                         break;
                 }
         }
-
-        // [params check]
-        if (args.Length < 1)
-            return;
-        if (!args[0].StartsWith('-'))
-            return;
-        return;
     }
 
     private static bool GetFromCache(string cacheFile)
