@@ -25,18 +25,26 @@ public class Game
         }
     }
 
-    private float CalculateCompletion()
+    private float? _difficulty;
+
+    public float? Difficulty
     {
-        int totalAchieved = 0;
-        foreach (Achievement achievement in Achievements)
+        get
         {
-            if (achievement.Achieved)
-                totalAchieved++;
+            if (Achievements.Count != 0)
+                _difficulty ??= CalculateDifficulty();
+            return _difficulty;
         }
+    }
 
-        if (totalAchieved == 0)
-            return 0F;
+    private float CalculateCompletion()
+        => (float)Achievements.Average(a => a.Achieved ? 100M: 0);
 
-        return (float) totalAchieved / Achievements.Count;
+    private float CalculateDifficulty()
+    {
+        var notAchieved = Achievements.Where(g => !g.Achieved);
+        if (!notAchieved.Any())
+            return 1F;
+        return notAchieved.Average(a => a.Percent);
     }
 }
