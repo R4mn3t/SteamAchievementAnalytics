@@ -50,7 +50,8 @@ internal class Program
                         catch (Exception ex)
                         {
                             Console.WriteLine(
-                                "Something went wrong accessing the api! Did you provide valid arguments?\n{0}", ex.ToString());
+                                "Something went wrong accessing the api! Did you provide valid arguments?\n{0}",
+                                ex.ToString());
                         }
 
                         break;
@@ -155,17 +156,17 @@ internal class Program
             var globalAchievements = await globalAchievementResponse.Content
                 .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
 
-            if (!apiAchievements.playerstats.success)
+            if (!apiAchievements.playerstats.success || apiAchievements.playerstats.achievements is null)
                 continue;
 
-            for (int i = 0; i < globalAchievements.achievementpercentages.achievements.Length; i++)
+            for (int i = 0; i < apiAchievements.playerstats.achievements.Length; i++)
             {
-                var apiGlobalAchievement = globalAchievements.achievementpercentages.achievements[i];
                 var apiAchievement = apiAchievements.playerstats.achievements[i];
 
                 Achievement achievement = new Achievement();
                 achievement.Achieved = apiAchievement.achieved == 1;
-                achievement.Percent = apiGlobalAchievement.percent;
+                achievement.Percent = globalAchievements.achievementpercentages.achievements
+                    .First(a => a.name == apiAchievement.apiname).percent;
                 achievement.Name = apiAchievement.apiname;
 
                 game.Achievements.Add(achievement);

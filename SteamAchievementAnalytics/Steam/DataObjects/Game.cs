@@ -44,7 +44,7 @@ public class Game
     {
         var notAchieved = Achievements.Where(g => !g.Achieved);
         if (!notAchieved.Any())
-            return 1F;
+            return 100F;
         return notAchieved.Average(a => a.Percent);
     }
 }
