@@ -276,7 +276,7 @@ lu list-unfinished                      Prints out unfinished games (min. 1 achi
 slau sorted-list-ascending-unfinished   Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion ascending
 sldu sorted-list-descending-unfinished  Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion descending
 
-lu list-difficulty                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty]
+ld list-difficulty                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty]
 slad sorted-list-ascending-difficulty   Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty] sorted by difficulty ascending
 sldd sorted-list-descending-difficulty  Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty] sorted by difficulty descending
 

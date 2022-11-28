@@ -1,7 +1,7 @@
 ﻿# About
 This tool is suppose to help with choosing the easiest game to complete to bump the average game completion. 
 # Important
-This tool is only able to read the games you have from the steam api.  
+This tool is only able to read the games you have from the steam api. 
 If you're profile is private the api does not return any games.  
 If you have returned a game, the api will not return that game.    
 But steam will still track that game as started.  
@@ -22,11 +22,11 @@ sld sorted-list-descending              Prints out all games with achievements a
 slas sorted-list-ascending-stared       Prints out started games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion ascending
 slds sorted-list-descending-stared      Prints out started games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion descending
 
-lu list-unfinished                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion]
+ld list-unfinished                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion]
 slau sorted-list-ascending-unfinished   Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion ascending
 sldu sorted-list-descending-unfinished  Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion descending
 
-lu list-difficulty                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty]
+ld list-difficulty                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty]
 slad sorted-list-ascending-difficulty   Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty] sorted by difficulty ascending
 sldd sorted-list-descending-difficulty  Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty] sorted by difficulty descending
 
