@@ -261,8 +261,7 @@ internal class Program
 -la --load-api      [apikey] [userid]   Loads user game data with the achievements from the api
 -lf --load-file     [file]              Loads user game data from a given file
 -d --dump           [file]              Dumps the user game data to a file (for -lf)
--ds --dataset       [dataset]           Outputs data
--c --calculate      [calculation]       Calculates data and outputs the result                         
+-ds --dataset       [dataset]           Outputs data                        
 
 Datasets:
 c comp completion                       Prints out total completion average
