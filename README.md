@@ -1,5 +1,11 @@
 ﻿# About
 This tool is suppose to help with choosing the easiest game to complete to bump the average game completion. 
+# Important
+This tool is only able to read the games you have from the steam api.  
+If you're profile is private the api does not return any games.  
+If you have returned a game, the api will not return that game.    
+But steam will still track that game as started.  
+Therefor the calculated Completion % will be of.  
 ```
 -h --help                               Displays this info
 -la --load-api      [apikey] [userid]   Loads user game data with the achievements from the api
