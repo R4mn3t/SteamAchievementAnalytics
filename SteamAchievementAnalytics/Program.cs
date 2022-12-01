@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Collections.Immutable;
+using System.Net.Http.Json;
 using Newtonsoft.Json;
 using SteamAchievementAnalytics.Steam.DataObjects;
 
@@ -215,64 +216,43 @@ internal static class Program
     /// <param name="type">typw of datasheet</param>
     private static void Datasheet(string type)
     {
-        switch (type)
+        IEnumerable<Game> games = _userLibrary.Games;
+        
+        foreach (char c in type)
         {
-            case "c":
-            case "completion":
-            case "comp":
-                Console.Write(_userLibrary.TotalCompletion());
-                break;
-            case "l":
-            case "list":
-                _userLibrary.TotalNames().PrintCompletion(_userLibrary);
-                break;
-            case "ls":
-            case "list-started":
-                _userLibrary.TotalStartedNames().PrintCompletion(_userLibrary);
-                break;
-            case "sla":
-            case "sorted-list-ascending":
-                _userLibrary.TotalNamesSortedByCompletion(true).PrintCompletion(_userLibrary);
-                break;
-            case "sld":
-            case "sorted-list-descending":
-                _userLibrary.TotalNamesSortedByCompletion(false).PrintCompletion(_userLibrary);
-                break;
-            case "slas":
-            case "sorted-lst-ascending-stared":
-                _userLibrary.TotalStartedNamesSortedByCompletion(true).PrintCompletion(_userLibrary);
-                break;
-            case "slds":
-            case "sorted-lst-descending-stared":
-                _userLibrary.TotalStartedNamesSortedByCompletion(false).PrintCompletion(_userLibrary);
-                break;
-            case "lu":
-            case "list-unfinished":
-                _userLibrary.TotalUnfinsishedNames().PrintCompletion(_userLibrary);
-                break;
-            case "slau":
-            case "sorted-list-ascending-unfinished":
-                _userLibrary.TotalUnfinishedNamesSortedByCompletion(true).PrintCompletion(_userLibrary);
-                break;
-            case "sldu":
-            case "sorted-list-descending-unfinished":
-                _userLibrary.TotalUnfinishedNamesSortedByCompletion(false).PrintCompletion(_userLibrary);
-                break;
-            case "ld":
-            case "list-difficulty":
-                _userLibrary.TotalUnfinsishedNames().PrintDifficulty(_userLibrary);
-                break;
-            case "slad":
-            case "sorted-list-ascending-difficulty":
-                _userLibrary.TotalUnfinishedNamesSortedByDifficulty(true).PrintDifficulty(_userLibrary);
-                break;
-            case "sldd":
-            case "sorted-list-descending-difficulty":
-                _userLibrary.TotalUnfinishedNamesSortedByDifficulty(false).PrintDifficulty(_userLibrary);
-                break;
-            default:
-                Console.WriteLine("Unable to find process {0}", type);
-                break;
+            switch (c)
+            {
+                case 'c':
+                    Console.Write(games.TotalCompletion());
+                    break;
+                case 'u':
+                    games = games.Unfinished();
+                    break;
+                case 'a':
+                    games = games.Started();
+                    break;
+                case 'y':
+                    games.PrintCompletion();
+                    break;
+                case 'x':
+                    games.PrintDifficulty();
+                    break;
+                case 'g':
+                    games = games.SortedByCompletion(true);
+                    break;
+                case 'h':
+                    games = games.SortedByCompletion(false);
+                    break;
+                case 'i':
+                    games = games.SortedByDifficulty(true);
+                    break;
+                case 'j':
+                    games = games.SortedByDifficulty(false);
+                    break;
+                default:
+                    Console.WriteLine("Unable to find datasheet value {0}", type);
+                    return;
+            }
         }
     }
 
@@ -291,25 +271,18 @@ internal static class Program
 -hu --human                             Get Human info (e.g. total games loaded from the api)                       
 
 Datasets:
-c comp completion                       Prints out total completion average
-l list                                  Prints out all games with achievements and the completion of that game [game]=[completion]
-ls list-started                         Prints out started games (min. 1 achievement) with the completion of that game [game]=[completion]
-sla sorted-list-ascending               Prints out all games with achievements and the completion of that game [game]=[completion] sorted by completion ascending
-sld sorted-list-descending              Prints out all games with achievements and the completion of that game [game]=[completion] sorted by completion descending
-slas sorted-list-ascending-stared       Prints out started games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion ascending
-slds sorted-list-descending-stared      Prints out started games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion descending
-
-lu list-unfinished                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion]
-slau sorted-list-ascending-unfinished   Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion ascending
-sldu sorted-list-descending-unfinished  Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[completion] sorted by completion descending
-
-ld list-difficulty                      Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty]
-slad sorted-list-ascending-difficulty   Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty] sorted by difficulty ascending
-sldd sorted-list-descending-difficulty  Prints out unfinished games (min. 1 achievement) with the completion of that game [game]=[difficulty] sorted by difficulty descending
-
+c       Print total completion
+u       Unfinished
+a       Started
+y       Print completion
+x       Print difficulty
+g       Sorted by completion ASC
+h       Sorted by completion DESC
+i       Sorted by difficulty ASC
+j       Sorted by difficulty DESC
 Examples:
--la [Key] [userid] -d cache.json -ds slas
--lf cache.json -ds sldu 
+-la [Key] [userid] -d cache.json -ds c      This will print out the total completion average.
+-lf cache.json -ds iux                      This will print out a all games and there difficulty to 100% sorted by the difficulty.
 ");
     }
 
@@ -331,14 +304,14 @@ internal static class Extension
     /// </summary>
     /// <param name="data"></param>
     /// <param name="library"></param>
-    public static void PrintCompletion(this List<string> data, Library library)
-        => data.ForEach(n => Console.WriteLine("{0}={1}", n, library.CompletionByName(n)));
+    public static void PrintCompletion(this IEnumerable<Game> games)
+        => games.ToList().ForEach(n => Console.WriteLine("{0}={1}", n.Name, n.Completion));
 
     /// <summary>
     /// Print data to the Console
     /// </summary>
     /// <param name="data"></param>
     /// <param name="library"></param>
-    public static void PrintDifficulty(this List<string> data, Library library)
-        => data.ForEach(n => Console.WriteLine("{0}={1}", n, library.DifficultyByName(n)));
+    public static void PrintDifficulty(this IEnumerable<Game> games)
+        => games.ToList().ForEach(n => Console.WriteLine("{0}={1}", n.Name, n.Difficulty));
 }
