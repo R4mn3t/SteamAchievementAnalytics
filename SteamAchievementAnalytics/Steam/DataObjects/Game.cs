@@ -1,6 +1,6 @@
-﻿using SteamAchievmentAnalytics.Steam.API.achievements.userAchievements;
+﻿using SteamAchievementAnalytics.Steam.API.achievements.userAchievements;
 
-namespace SteamAchievmentAnalytics.Steam.DataObjects;
+namespace SteamAchievementAnalytics.Steam.DataObjects;
 
 public class Game
 {

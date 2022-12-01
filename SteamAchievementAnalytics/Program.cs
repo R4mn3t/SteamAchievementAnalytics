@@ -1,150 +1,162 @@
-﻿using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using SteamAchievmentAnalytics;
-using System.IO;
-using System.Linq;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Newtonsoft.Json;
-using SteamAchievmentAnalytics.Steam.DataObjects;
+using SteamAchievementAnalytics.Steam.DataObjects;
 
-namespace SteamAchievmentAnalytics;
+namespace SteamAchievementAnalytics;
 // check input params
 
-internal class Program
+internal static class Program
 {
-    public static Library library = new Library();
+    private static Library _userLibrary = new Library();
+    private static bool _isHuman;
 
     private static async Task Main(string[] args)
     {
-        int cache = 0;
         for (int i = 0; i < args.Length; i++)
         {
-            cache = i;
-            if (args[i].StartsWith("-"))
-                switch (args[i].Substring(1).ToLower())
-                {
-                    case "h":
-                    case "-help":
+            int cache = i; // to cache the i index in case multiple arguments are given the the procedures
+            if (!args[i].StartsWith("-"))
+                continue;
+            // code below will only be run if args[i] start with '-'
 
-                        PrintHelp();
+            switch (args[i][1..].ToLower()) // Substring(1)
+            {
+                case "h":
+                case "-help":
+                    PrintHelp();
+                    break;
+                case "hu":
+                case "-human":
+                    _isHuman = true;
+                    break;
+                case "la":
+                case "-load-api":
+                    if (args.Length - i < 3)
+                    {
+                        Console.WriteLine("missing parameters after {0}", args[i]);
+                        return;
+                    }
 
-                        break;
+                    i += 2; // moved argument pointer 2 ahead since it expects 2 params for this function
+                    try
+                    {
+                        bool hasGames = await GetFromApi(args[cache + 1], args[cache + 2]);
+                        if (!hasGames)
+                            Console.WriteLine("This steam user might have no games!");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(
+                            "Something went wrong accessing the api! Did you provide valid arguments?\n{0}", ex);
+                    }
 
-                    case "la":
-                    case "-load-api":
+                    break;
+                case "lf":
+                case "-load-file":
+                    if (args.Length - i < 2)
+                        return;
+                    i += 1;
+                    if (!GetFromCache(args[cache + 1]))
+                        Console.WriteLine("Unable to load file");
+                    break;
+                case "d":
+                case "-dump":
+                    if (args.Length - i < 1)
+                    {
+                        Console.WriteLine("missing parameters after {0}", args[i]);
+                        return;
+                    }
 
-                        if (args.Length - i < 3)
-                        {
-                            Console.WriteLine("missing parameters after {0}", args[i]);
-                            return;
-                        }
+                    i += 1; // moved argument pointer 1 ahead since it expects 1 params for this function
+                    DumpToFile(args[cache + 1]);
+                    break;
+                case "ds":
+                case "-dataset":
 
-                        i += 2;
-                        try
-                        {
-                            bool hasGames = await GetFromApi(args[cache + 1], args[cache + 2]);
-                            if (!hasGames)
-                                Console.WriteLine("This steam user might have no games!");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(
-                                "Something went wrong accessing the api! Did you provide valid arguments?\n{0}",
-                                ex.ToString());
-                        }
+                    if (args.Length - i < 1)
+                    {
+                        Console.WriteLine("missing parameters after {0}", args[i]);
+                        return;
+                    }
 
-                        break;
-
-                    case "lf":
-                    case "-load-file":
-
-                        if (args.Length - i < 2)
-                            return;
-
-                        i += 1;
-
-                        if (!GetFromCache(args[cache + 1]))
-                            Console.WriteLine("Unable to load file");
-
-                        break;
-                    case "d":
-                    case "-dump":
-
-                        if (args.Length - i < 1)
-                        {
-                            Console.WriteLine("missing parameters after {0}", args[i]);
-                            return;
-                        }
-
-                        i += 1;
-
-                        DumpToFile(args[cache + 1]);
-
-                        break;
-                    case "ds":
-                    case "-dataset":
-
-                        if (args.Length - i < 1)
-                        {
-                            Console.WriteLine("missing parameters after {0}", args[i]);
-                            return;
-                        }
-
-                        i += 1;
-
-                        Process(args[cache + 1]);
-                        break;
-                    default:
-                        Console.WriteLine("Unrecognized argument: {0}", args[i]);
-                        break;
-                }
+                    i += 1; // moved argument pointer 1 ahead since it expects 1 params for this function
+                    Datasheet(args[cache + 1]);
+                    break;
+                default:
+                    Console.WriteLine("Unrecognized argument: {0}", args[i]);
+                    break;
+            }
         }
     }
 
+    /// <summary>
+    /// Read the given file and fills the global library object
+    /// </summary>
+    /// <param name="cacheFile">file path</param>
+    /// <returns></returns>
     private static bool GetFromCache(string cacheFile)
     {
-        using StreamReader sr = new StreamReader(cacheFile);
-        library = JsonConvert.DeserializeObject<Library>(sr.ReadToEnd()) ?? new Library();
-        return !library.Equals(new Library());
+        using var sr = new StreamReader(cacheFile);
+        _userLibrary = JsonConvert.DeserializeObject<Library>(sr.ReadToEnd()) ?? new Library();
+        return !_userLibrary.Equals(new Library());
     }
 
+    /// <summary>
+    /// pull data from the steam api to create the global library object
+    /// </summary>
+    /// <param name="key">steam api key</param>
+    /// <param name="userId">steam user id</param>
+    /// <returns></returns>
     private static async Task<bool> GetFromApi(string key, string userId)
     {
-        // save cursor position
+        // save cursor position (only relevant if IsHuman is set)
         (int left, int top) cursor = Console.GetCursorPosition();
 
         HttpClient client = new();
+
+        #region Games
+
         string userGamesUrl = Global.SteamAPI.GetUserGamesUrl(key, userId);
 
+        // Send request to the api for all games
+        var userGamesResponse = await client.SendAsync(Global.Http.Get(userGamesUrl));
 
-        var userGamesReponse = await client.SendAsync(Global.Http.Get(userGamesUrl));
+        // Response Object
+        var userGamesObject = JsonConvert
+                                  .DeserializeObject<Steam.API.userGames.UserGames>(await userGamesResponse
+                                      .Content
+                                      .ReadAsStringAsync()) ??
+                              new Steam.API.userGames.UserGames();
 
-        var apiGames = Newtonsoft.Json.JsonConvert
-                           .DeserializeObject<Steam.API.userGames.UserGames>(await userGamesReponse.Content
-                               .ReadAsStringAsync()) ??
-                       new Steam.API.userGames.UserGames();
-
-        if (apiGames.Equals(new Steam.API.userGames.UserGames()))
+        // Check if the response object contains data
+        if (userGamesObject.Equals(new Steam.API.userGames.UserGames()))
             return false;
 
+        #endregion // Games
 
-        for (var index = 0; index < apiGames.response.games.Length; index++)
+        for (var index = 0; index < userGamesObject.response.games.Length; index++)
         {
-            var apiGame = apiGames.response.games[index];
+            var apiGame = userGamesObject.response.games[index];
 
             Game game = new Game();
             game.Id = apiGame.appid;
 
             string achievementUrl = Global.SteamAPI.GetGameAchievementUrl(key, userId, apiGame.appid.ToString());
+
+            // Send request for all achievements of a given game
             var gameAchievementResponse = await client.SendAsync(Global.Http.Get(achievementUrl));
 
-            var apiAchievements = await gameAchievementResponse.Content
+            // Response Object
+            var gameAchievementObject = await gameAchievementResponse.Content
                 .ReadFromJsonAsync<Steam.API.achievements.userAchievements.Achievements>();
+
+            // Check if the response object contains data
+            if (gameAchievementObject is null)
+                continue;
 
             #region Name
 
-            game.Name = apiAchievements.playerstats.gameName;
+            game.Name = gameAchievementObject.playerstats.gameName;
 
             #endregion
 
@@ -153,98 +165,110 @@ internal class Program
             string globalAchievementUrl = Global.SteamAPI.GetgameGlobalAchievementsUrl(apiGame.appid.ToString());
             var globalAchievementResponse = await client.SendAsync(Global.Http.Get(globalAchievementUrl));
 
-            var globalAchievements = await globalAchievementResponse.Content
+            // Send request for all completion rates of the achievements for a given game
+            var globalAchievementsObject = await globalAchievementResponse.Content
                 .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
 
-            if (!apiAchievements.playerstats.success || apiAchievements.playerstats.achievements is null)
+            if (!gameAchievementObject.playerstats.success || gameAchievementObject.playerstats.achievements is null)
                 continue;
 
-            for (int i = 0; i < apiAchievements.playerstats.achievements.Length; i++)
+            // Write Achievements into the game object (for the library)
+            foreach (var apiAchievement in gameAchievementObject.playerstats.achievements)
             {
-                var apiAchievement = apiAchievements.playerstats.achievements[i];
-
-                Achievement achievement = new Achievement();
-                achievement.Achieved = apiAchievement.achieved == 1;
-                achievement.Percent = globalAchievements.achievementpercentages.achievements
-                    .First(a => a.name == apiAchievement.apiname).percent;
-                achievement.Name = apiAchievement.apiname;
+                var achievement1 = apiAchievement;
+                Achievement achievement = new()
+                {
+                    Achieved = apiAchievement.achieved == 1,
+                    Percent = globalAchievementsObject.achievementpercentages.achievements
+                        .First(a => a.name == achievement1.apiname).percent,
+                    Name = apiAchievement.apiname
+                };
 
                 game.Achievements.Add(achievement);
             }
 
             #endregion
 
-            library.Games.Add(game);
+            // Add game to the library
+            _userLibrary.Games.Add(game);
 
+            if (!_isHuman)
+                continue;
 
+            // Human output ("Update Text")
             Console.SetCursorPosition(cursor.left, cursor.top);
+
             Console.WriteLine(
-                "Loading games: {0}/{1} {2}%"
+                "Loading games: {0}/{1} {2:0.00}%"
                 , index + 1
-                , apiGames.response.game_count
-                , ((float) (index + 1) / (float) apiGames.response.game_count * 100F).ToString("0.00"));
+                , userGamesObject.response.game_count,
+                ((index + 1) / (float) userGamesObject.response.game_count * 100F));
         }
 
         Console.SetCursorPosition(cursor.left, cursor.top);
         return true;
     }
 
-    private static void Process(string type)
+    /// <summary>
+    /// uses the global library object to print out data based on <paramref name="type"/>.
+    /// </summary>
+    /// <param name="type">typw of datasheet</param>
+    private static void Datasheet(string type)
     {
         switch (type)
         {
             case "c":
             case "completion":
             case "comp":
-                Console.Write(library.TotalCompletion());
+                Console.Write(_userLibrary.TotalCompletion());
                 break;
             case "l":
             case "list":
-                library.TotalNames().PrintCompletion(library);
+                _userLibrary.TotalNames().PrintCompletion(_userLibrary);
                 break;
             case "ls":
             case "list-started":
-                library.TotalStartedNames().PrintCompletion(library);
+                _userLibrary.TotalStartedNames().PrintCompletion(_userLibrary);
                 break;
             case "sla":
             case "sorted-list-ascending":
-                library.TotalNamesSortedByCompletion(true).PrintCompletion(library);
+                _userLibrary.TotalNamesSortedByCompletion(true).PrintCompletion(_userLibrary);
                 break;
             case "sld":
             case "sorted-list-descending":
-                library.TotalNamesSortedByCompletion(false).PrintCompletion(library);
+                _userLibrary.TotalNamesSortedByCompletion(false).PrintCompletion(_userLibrary);
                 break;
             case "slas":
             case "sorted-lst-ascending-stared":
-                library.TotalStartedNamesSortedByCompletion(true).PrintCompletion(library);
+                _userLibrary.TotalStartedNamesSortedByCompletion(true).PrintCompletion(_userLibrary);
                 break;
             case "slds":
             case "sorted-lst-descending-stared":
-                library.TotalStartedNamesSortedByCompletion(false).PrintCompletion(library);
+                _userLibrary.TotalStartedNamesSortedByCompletion(false).PrintCompletion(_userLibrary);
                 break;
             case "lu":
             case "list-unfinished":
-                library.TotalUnfinsishedNames().PrintCompletion(library);
+                _userLibrary.TotalUnfinsishedNames().PrintCompletion(_userLibrary);
                 break;
             case "slau":
             case "sorted-list-ascending-unfinished":
-                library.TotalUnfinishedNamesSortedByCompletion(true).PrintCompletion(library);
+                _userLibrary.TotalUnfinishedNamesSortedByCompletion(true).PrintCompletion(_userLibrary);
                 break;
             case "sldu":
             case "sorted-list-descending-unfinished":
-                library.TotalUnfinishedNamesSortedByCompletion(false).PrintCompletion(library);
+                _userLibrary.TotalUnfinishedNamesSortedByCompletion(false).PrintCompletion(_userLibrary);
                 break;
             case "ld":
             case "list-difficulty":
-                library.TotalUnfinsishedNames().PrintDifficulty(library);
+                _userLibrary.TotalUnfinsishedNames().PrintDifficulty(_userLibrary);
                 break;
             case "slad":
             case "sorted-list-ascending-difficulty":
-                library.TotalUnfinishedNamesSortedByDifficulty(true).PrintDifficulty(library);
+                _userLibrary.TotalUnfinishedNamesSortedByDifficulty(true).PrintDifficulty(_userLibrary);
                 break;
             case "sldd":
             case "sorted-list-descending-difficulty":
-                library.TotalUnfinishedNamesSortedByDifficulty(false).PrintDifficulty(library);
+                _userLibrary.TotalUnfinishedNamesSortedByDifficulty(false).PrintDifficulty(_userLibrary);
                 break;
             default:
                 Console.WriteLine("Unable to find process {0}", type);
@@ -252,7 +276,9 @@ internal class Program
         }
     }
 
-
+    /// <summary>
+    /// Prints out help textwall
+    /// </summary>
     private static void PrintHelp()
     {
         Console.Write(@"Args
@@ -261,7 +287,8 @@ internal class Program
 -la --load-api      [apikey] [userid]   Loads user game data with the achievements from the api
 -lf --load-file     [file]              Loads user game data from a given file
 -d --dump           [file]              Dumps the user game data to a file (for -lf)
--ds --dataset       [dataset]           Outputs data                        
+-ds --dataset       [dataset]           Outputs data 
+-hu --human                             Get Human info (e.g. total games loaded from the api)                       
 
 Datasets:
 c comp completion                       Prints out total completion average
@@ -286,18 +313,32 @@ Examples:
 ");
     }
 
+    /// <summary>
+    /// Serializes global Library object and writes it to the given file
+    /// </summary>
+    /// <param name="fileName">file path</param>
     private static void DumpToFile(string fileName)
     {
         using var streamWriter = new StreamWriter(string.Format(fileName));
-        streamWriter.Write(JsonConvert.SerializeObject(library));
+        streamWriter.Write(JsonConvert.SerializeObject(_userLibrary));
     }
 }
 
 internal static class Extension
 {
+    /// <summary>
+    /// Print data to the Console
+    /// </summary>
+    /// <param name="data"></param>
+    /// <param name="library"></param>
     public static void PrintCompletion(this List<string> data, Library library)
         => data.ForEach(n => Console.WriteLine("{0}={1}", n, library.CompletionByName(n)));
 
+    /// <summary>
+    /// Print data to the Console
+    /// </summary>
+    /// <param name="data"></param>
+    /// <param name="library"></param>
     public static void PrintDifficulty(this List<string> data, Library library)
         => data.ForEach(n => Console.WriteLine("{0}={1}", n, library.DifficultyByName(n)));
 }

@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace SteamAchievmentAnalytics.Steam.DataObjects;
+namespace SteamAchievementAnalytics.Steam.DataObjects;
 
 public class Library
 {

@@ -1,4 +1,4 @@
-﻿namespace SteamAchievmentAnalytics.Steam.DataObjects;
+﻿namespace SteamAchievementAnalytics.Steam.DataObjects;
 
 public class Achievement
 {

@@ -12,6 +12,7 @@ Therefor the calculated Completion % will be of.
 -lf --load-file     [file]              Loads user game data from a given file
 -d --dump           [file]              Dumps the user game data to a file (for -lf)
 -ds --dataset       [dataset]           Outputs data                    
+-hu --human                             Get Human info (e.g. total games loaded from the api)
 
 Datasets:
 c comp completion                       Prints out total completion average

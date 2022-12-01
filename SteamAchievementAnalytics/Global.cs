@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Dynamic;
 
-namespace SteamAchievmentAnalytics
+namespace SteamAchievementAnalytics
 {
     public static class Global
     {

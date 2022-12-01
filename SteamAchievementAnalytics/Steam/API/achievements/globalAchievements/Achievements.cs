@@ -1,4 +1,4 @@
-﻿namespace SteamAchievmentAnalytics.Steam.API.achievements.globalAchievements;
+﻿namespace SteamAchievementAnalytics.Steam.API.achievements.globalAchievements;
 
 public class Achievements
 {
