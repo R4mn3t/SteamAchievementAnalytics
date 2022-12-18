@@ -26,7 +26,7 @@ i       Sorted by difficulty ASC
 j       Sorted by difficulty DESC
 Examples:
 -la [Key] [userid] -d cache.json -ds c      This will print out the total completion average.
--lf cache.json -ds iux                      This will print out a all games and there difficulty to 100% sorted by the difficulty.
+-lf cache.json -ds auix                     This will print out a all games and there difficulty to 100% sorted by the difficulty.
 ```
 # Also
 The project name was probl. poorly chosen.

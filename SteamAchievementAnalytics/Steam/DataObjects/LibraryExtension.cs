@@ -11,7 +11,7 @@ public static class LibraryExtension
         => games.Where(g => g.Completion > 0F);
 
     public static IEnumerable<Game> Unfinished(this IEnumerable<Game> games)
-        => games.Where(g => g.Completion is > 0F and < 100F);
+        => games.Where(g => g.Completion < 100F);
 
     public static IEnumerable<Game> SortedByCompletion(this IEnumerable<Game> game, bool asc)
     {
