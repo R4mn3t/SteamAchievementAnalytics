@@ -134,65 +134,11 @@ internal static class Program
             return false;
 
         #endregion // Games
-
+        List<Task<Game>> games = new();
         for (var index = 0; index < userGamesObject.response.games.Length; index++)
         {
             var apiGame = userGamesObject.response.games[index];
-
-            Game game = new Game();
-            game.Id = apiGame.appid;
-
-            string achievementUrl = Global.SteamAPI.GetGameAchievementUrl(key, userId, apiGame.appid.ToString());
-
-            // Send request for all achievements of a given game
-            var gameAchievementResponse = await client.SendAsync(Global.Http.Get(achievementUrl));
-
-            // Response Object
-            var gameAchievementObject = await gameAchievementResponse.Content
-                .ReadFromJsonAsync<Steam.API.achievements.userAchievements.Achievements>();
-
-            // Check if the response object contains data
-            if (gameAchievementObject is null)
-                continue;
-
-            #region Name
-
-            game.Name = gameAchievementObject.playerstats.gameName;
-
-            #endregion
-
-            #region Achievements
-
-            string globalAchievementUrl = Global.SteamAPI.GetgameGlobalAchievementsUrl(apiGame.appid.ToString());
-            var globalAchievementResponse = await client.SendAsync(Global.Http.Get(globalAchievementUrl));
-
-            // Send request for all completion rates of the achievements for a given game
-            var globalAchievementsObject = await globalAchievementResponse.Content
-                .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
-
-            if (!gameAchievementObject.playerstats.success || gameAchievementObject.playerstats.achievements is null)
-                continue;
-
-            // Write Achievements into the game object (for the library)
-            foreach (var apiAchievement in gameAchievementObject.playerstats.achievements)
-            {
-                var achievement1 = apiAchievement;
-                Achievement achievement = new()
-                {
-                    Achieved = apiAchievement.achieved == 1,
-                    Percent = globalAchievementsObject.achievementpercentages.achievements
-                        .First(a => a.name == achievement1.apiname).percent,
-                    Name = apiAchievement.apiname
-                };
-
-                game.Achievements.Add(achievement);
-            }
-
-            #endregion
-
-            // Add game to the library
-            _userLibrary.Games.Add(game);
-
+            games.Add(GetGameAsync(client, apiGame.appid, key, userId));
             if (!_isHuman)
                 continue;
 
@@ -206,8 +152,74 @@ internal static class Program
                 ((index + 1) / (float) userGamesObject.response.game_count * 100F));
         }
 
+        await Task.WhenAll(games);
+
+        foreach (var game in games)
+        {
+            var g = await game;
+            if (g is null)
+                continue;
+            _userLibrary.Games.Add(g);
+        }
         Console.SetCursorPosition(cursor.left, cursor.top);
         return true;
+    }
+
+    private static async Task<Game> GetGameAsync(HttpClient client, int appId, string apikey, string userId)
+    {
+        Game game = new Game();
+        game.Id = appId;
+
+        string achievementUrl = Global.SteamAPI.GetGameAchievementUrl(apikey, userId, appId.ToString());
+
+        // Send request for all achievements of a given game
+        var gameAchievementResponse = await client.SendAsync(Global.Http.Get(achievementUrl));
+
+        // Response Object
+        var gameAchievementObject = await gameAchievementResponse.Content
+            .ReadFromJsonAsync<Steam.API.achievements.userAchievements.Achievements>();
+
+        // Check if the response object contains data
+        if (gameAchievementObject is null)
+            return null;
+
+        #region Name
+
+        game.Name = gameAchievementObject.playerstats.gameName;
+
+        #endregion
+
+        #region Achievements
+
+        string globalAchievementUrl = Global.SteamAPI.GetgameGlobalAchievementsUrl(appId.ToString());
+        var globalAchievementResponse = await client.SendAsync(Global.Http.Get(globalAchievementUrl));
+
+        // Send request for all completion rates of the achievements for a given game
+        var globalAchievementsObject = await globalAchievementResponse.Content
+            .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
+
+        if (!gameAchievementObject.playerstats.success || gameAchievementObject.playerstats.achievements is null)
+            return null;
+
+
+        // Write Achievements into the game object (for the library)
+        foreach (var apiAchievement in gameAchievementObject.playerstats.achievements)
+        {
+            var achievement1 = apiAchievement;
+            Achievement achievement = new()
+            {
+                Achieved = apiAchievement.achieved == 1,
+                Percent = globalAchievementsObject.achievementpercentages.achievements
+                    .First(a => a.name == achievement1.apiname).percent,
+                Name = apiAchievement.apiname
+            };
+
+            game.Achievements.Add(achievement);
+        }
+
+        #endregion
+
+        return game;
     }
 
     /// <summary>
@@ -217,7 +229,7 @@ internal static class Program
     private static void Datasheet(string type)
     {
         IEnumerable<Game> games = _userLibrary.Games;
-        
+
         foreach (char c in type)
         {
             switch (c)
