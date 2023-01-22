@@ -8,11 +8,9 @@ namespace SteamAchievementAnalytics;
 
 internal static class Program
 {
-    private static Library _userLibrary = new Library();
-    private static bool _isHuman;
-
     private static async Task Main(string[] args)
     {
+        Library userLibrary = new();
         for (int i = 0; i < args.Length; i++)
         {
             int cache = i; // to cache the i index in case multiple arguments are given the the procedures
@@ -26,10 +24,6 @@ internal static class Program
                 case "-help":
                     PrintHelp();
                     break;
-                case "hu":
-                case "-human":
-                    _isHuman = true;
-                    break;
                 case "la":
                 case "-load-api":
                     if (args.Length - i < 3)
@@ -41,8 +35,13 @@ internal static class Program
                     i += 2; // moved argument pointer 2 ahead since it expects 2 params for this function
                     try
                     {
-                        bool hasGames = await GetFromApi(args[cache + 1], args[cache + 2]);
-                        if (!hasGames)
+                        userLibrary = await GetFromApi(args[cache + 1], args[cache + 2]);
+                        if (userLibrary is null)
+                        {
+                            Console.WriteLine("Api return invalid values!");
+                            break;
+                        }
+                        if (userLibrary.Games.Count == 0)
                             Console.WriteLine("This steam user might have no games!");
                     }
                     catch (Exception ex)
@@ -57,7 +56,7 @@ internal static class Program
                     if (args.Length - i < 2)
                         return;
                     i += 1;
-                    if (!GetFromCache(args[cache + 1]))
+                    if (!GetFromCache(args[cache + 1], out userLibrary))
                         Console.WriteLine("Unable to load file");
                     break;
                 case "d":
@@ -69,7 +68,7 @@ internal static class Program
                     }
 
                     i += 1; // moved argument pointer 1 ahead since it expects 1 params for this function
-                    DumpToFile(args[cache + 1]);
+                    DumpToFile(args[cache + 1], userLibrary);
                     break;
                 case "ds":
                 case "-dataset":
@@ -81,7 +80,7 @@ internal static class Program
                     }
 
                     i += 1; // moved argument pointer 1 ahead since it expects 1 params for this function
-                    Datasheet(args[cache + 1]);
+                    Datasheet(args[cache + 1], userLibrary);
                     break;
                 default:
                     Console.WriteLine("Unrecognized argument: {0}", args[i]);
@@ -95,11 +94,11 @@ internal static class Program
     /// </summary>
     /// <param name="cacheFile">file path</param>
     /// <returns></returns>
-    private static bool GetFromCache(string cacheFile)
+    private static bool GetFromCache(string cacheFile, out Library library)
     {
         using var sr = new StreamReader(cacheFile);
-        _userLibrary = JsonConvert.DeserializeObject<Library>(sr.ReadToEnd()) ?? new Library();
-        return !_userLibrary.Equals(new Library());
+        library = JsonConvert.DeserializeObject<Library>(sr.ReadToEnd()) ?? new Library();
+        return !library.Equals(new Library());
     }
 
     /// <summary>
@@ -108,7 +107,7 @@ internal static class Program
     /// <param name="key">steam api key</param>
     /// <param name="userId">steam user id</param>
     /// <returns></returns>
-    private static async Task<bool> GetFromApi(string key, string userId)
+    private static async Task<Library> GetFromApi(string key, string userId)
     {
         // save cursor position (only relevant if IsHuman is set)
         (int left, int top) cursor = Console.GetCursorPosition();
@@ -131,7 +130,7 @@ internal static class Program
 
         // Check if the response object contains data
         if (userGamesObject.Equals(new Steam.API.userGames.UserGames()))
-            return false;
+            return null;
 
         #endregion // Games
         List<Task<Game>> games = new();
@@ -139,30 +138,19 @@ internal static class Program
         {
             var apiGame = userGamesObject.response.games[index];
             games.Add(GetGameAsync(client, apiGame.appid, key, userId));
-            if (!_isHuman)
-                continue;
-
-            // Human output ("Update Text")
-            Console.SetCursorPosition(cursor.left, cursor.top);
-
-            Console.WriteLine(
-                "Loading games: {0}/{1} {2:0.00}%"
-                , index + 1
-                , userGamesObject.response.game_count,
-                ((index + 1) / (float) userGamesObject.response.game_count * 100F));
         }
 
         await Task.WhenAll(games);
-
+        Library library = new Library();
         foreach (var game in games)
         {
             var g = await game;
             if (g is null)
                 continue;
-            _userLibrary.Games.Add(g);
+            library.Games.Add(g);
         }
         Console.SetCursorPosition(cursor.left, cursor.top);
-        return true;
+        return library;
     }
 
     private static async Task<Game> GetGameAsync(HttpClient client, int appId, string apikey, string userId)
@@ -226,9 +214,9 @@ internal static class Program
     /// uses the global library object to print out data based on <paramref name="type"/>.
     /// </summary>
     /// <param name="type">typw of datasheet</param>
-    private static void Datasheet(string type)
+    private static void Datasheet(string type, Library library)
     {
-        IEnumerable<Game> games = _userLibrary.Games;
+        IEnumerable<Game> games = library.Games;
 
         foreach (char c in type)
         {
@@ -279,8 +267,7 @@ internal static class Program
 -la --load-api      [apikey] [userid]   Loads user game data with the achievements from the api
 -lf --load-file     [file]              Loads user game data from a given file
 -d --dump           [file]              Dumps the user game data to a file (for -lf)
--ds --dataset       [dataset]           Outputs data 
--hu --human                             Get Human info (e.g. total games loaded from the api)                       
+-ds --dataset       [dataset]           Outputs data                       
 
 Datasets:
 c       Print total completion
@@ -302,10 +289,10 @@ Examples:
     /// Serializes global Library object and writes it to the given file
     /// </summary>
     /// <param name="fileName">file path</param>
-    private static void DumpToFile(string fileName)
+    private static void DumpToFile(string fileName, Library library)
     {
         using var streamWriter = new StreamWriter(string.Format(fileName));
-        streamWriter.Write(JsonConvert.SerializeObject(_userLibrary));
+        streamWriter.Write(JsonConvert.SerializeObject(library));
     }
 }
 
