@@ -90,10 +90,10 @@ internal static class Program
     }
 
     /// <summary>
-    /// Read the given file and fills the global library object
+    /// Read the given file and sets it to the out parameter <paramref name="library"/>
     /// </summary>
     /// <param name="cacheFile">file path</param>
-    /// <returns></returns>
+    /// <returns>success of the read operation</returns>
     private static bool GetFromCache(string cacheFile, out Library library)
     {
         using var sr = new StreamReader(cacheFile);
@@ -102,11 +102,11 @@ internal static class Program
     }
 
     /// <summary>
-    /// pull data from the steam api to create the global library object
+    /// pull data from the steam api
     /// </summary>
     /// <param name="key">steam api key</param>
     /// <param name="userId">steam user id</param>
-    /// <returns></returns>
+    /// <returns>Steam Game data. Can be null</returns>
     private static async Task<Library> GetFromApi(string key, string userId)
     {
         // save cursor position (only relevant if IsHuman is set)
@@ -213,7 +213,7 @@ internal static class Program
     /// <summary>
     /// uses the global library object to print out data based on <paramref name="type"/>.
     /// </summary>
-    /// <param name="type">typw of datasheet</param>
+    /// <param name="type">type of datasheet</param>
     private static void Datasheet(string type, Library library)
     {
         IEnumerable<Game> games = library.Games;
