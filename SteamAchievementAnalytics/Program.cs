@@ -223,7 +223,7 @@ internal static class Program
             switch (c)
             {
                 case 'c':
-                    Console.Write(games.TotalCompletion());
+                    Console.WriteLine($"AverageCompletion={games.TotalCompletion()}");
                     break;
                 case 'u':
                     games = games.Unfinished();
