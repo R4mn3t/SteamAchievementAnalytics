@@ -47,4 +47,6 @@ public class Game
             return 100F;
         return notAchieved.Average(a => a.Percent);
     }
+
+    public static Game Empty => new Game();
 }

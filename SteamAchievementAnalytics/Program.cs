@@ -36,11 +36,9 @@ internal static class Program
                     try
                     {
                         userLibrary = await GetFromApi(args[cache + 1], args[cache + 2]);
-                        if (userLibrary is null)
-                        {
+                        if (userLibrary.Equals(Library.Empty))
                             Console.WriteLine("Api return invalid values!");
-                            break;
-                        }
+
                         if (userLibrary.Games.Count == 0)
                             Console.WriteLine("This steam user might have no games!");
                     }
@@ -120,7 +118,9 @@ internal static class Program
 
         // Send request to the api for all games
         var userGamesResponse = await client.SendAsync(Global.Http.Get(userGamesUrl));
-
+        if (!userGamesResponse.IsSuccessStatusCode)
+            return Library.Empty;
+        
         // Response Object
         var userGamesObject = JsonConvert
                                   .DeserializeObject<Steam.API.userGames.UserGames>(await userGamesResponse
@@ -130,9 +130,10 @@ internal static class Program
 
         // Check if the response object contains data
         if (userGamesObject.Equals(new Steam.API.userGames.UserGames()))
-            return null;
+            return Library.Empty;
 
         #endregion // Games
+
         List<Task<Game>> games = new();
         for (var index = 0; index < userGamesObject.response.games.Length; index++)
         {
@@ -145,10 +146,11 @@ internal static class Program
         foreach (var game in games)
         {
             var g = await game;
-            if (g is null)
+            if (g.Equals(Game.Empty))
                 continue;
             library.Games.Add(g);
         }
+
         Console.SetCursorPosition(cursor.left, cursor.top);
         return library;
     }
@@ -163,13 +165,17 @@ internal static class Program
         // Send request for all achievements of a given game
         var gameAchievementResponse = await client.SendAsync(Global.Http.Get(achievementUrl));
 
+        // Check if response is good
+        if (!gameAchievementResponse.IsSuccessStatusCode)
+            return Game.Empty;
+
         // Response Object
         var gameAchievementObject = await gameAchievementResponse.Content
             .ReadFromJsonAsync<Steam.API.achievements.userAchievements.Achievements>();
 
         // Check if the response object contains data
         if (gameAchievementObject is null)
-            return null;
+            return Game.Empty;
 
         #region Name
 
@@ -182,12 +188,15 @@ internal static class Program
         string globalAchievementUrl = Global.SteamAPI.GetgameGlobalAchievementsUrl(appId.ToString());
         var globalAchievementResponse = await client.SendAsync(Global.Http.Get(globalAchievementUrl));
 
+        if (!globalAchievementResponse.IsSuccessStatusCode)
+            return Game.Empty;
+
         // Send request for all completion rates of the achievements for a given game
         var globalAchievementsObject = await globalAchievementResponse.Content
             .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
 
         if (!gameAchievementObject.playerstats.success || gameAchievementObject.playerstats.achievements is null)
-            return null;
+            return Game.Empty;
 
 
         // Write Achievements into the game object (for the library)
