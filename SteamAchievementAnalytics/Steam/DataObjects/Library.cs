@@ -10,6 +10,4 @@ public class Library
     }
 
     public List<Game> Games { get; set; }
-
-    public static Library Empty => new();
 }
