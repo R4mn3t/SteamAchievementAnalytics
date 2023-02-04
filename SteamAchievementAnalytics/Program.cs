@@ -258,6 +258,12 @@ internal static class Program
                 case 'j':
                     games = games.SortedByDifficulty(false);
                     break;
+                case 'z':
+                    Console.WriteLine($"TotalGames={games.Count()}");
+                    break;
+                case 'r':
+                    Console.WriteLine($"TotalAchievements={games.Sum(g=>g.Achievements.Count)}");
+                    break;
                 default:
                     Console.WriteLine("Unable to find datasheet value {0}", type);
                     return;
@@ -279,15 +285,23 @@ internal static class Program
 -ds --dataset       [dataset]           Outputs data                       
 
 Datasets:
+
+Print output with
 c       Print total completion
-u       Unfinished
-a       Started
+r       Print total game count
 y       Print completion
 x       Print difficulty
+z       Print total achievement count
+
+sort // limit the dataset with
+------------------------------
+u       Only Unfinished (remove all finished (100%))
+a       Only Started (remove all not started (0%))
 g       Sorted by completion ASC
 h       Sorted by completion DESC
 i       Sorted by difficulty ASC
 j       Sorted by difficulty DESC
+
 Examples:
 -la [Key] [userid] -d cache.json -ds c      This will print out the total completion average.
 -lf cache.json -ds auix                     This will print out a all games and there difficulty to 100% sorted by the difficulty.
