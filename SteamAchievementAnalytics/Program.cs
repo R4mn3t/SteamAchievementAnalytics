@@ -121,6 +121,8 @@ internal static class Program
         // Send request to the api for all games
         var userGamesResponse = await client.SendAsync(Global.Http.Get(userGamesUrl));
 
+        if (!userGamesResponse.IsSuccessStatusCode)
+            return null;
         // Response Object
         var userGamesObject = JsonConvert
                                   .DeserializeObject<Steam.API.userGames.UserGames>(await userGamesResponse
@@ -137,7 +139,10 @@ internal static class Program
         for (var index = 0; index < userGamesObject.response.games.Length; index++)
         {
             var apiGame = userGamesObject.response.games[index];
-            games.Add(GetGameAsync(client, apiGame.appid, key, userId));
+            var gameAsync = GetGameAsync(client, apiGame.appid, key, userId);
+            if (gameAsync is null)
+                return null;
+            games.Add(gameAsync);
         }
 
         await Task.WhenAll(games);
@@ -163,6 +168,8 @@ internal static class Program
         // Send request for all achievements of a given game
         var gameAchievementResponse = await client.SendAsync(Global.Http.Get(achievementUrl));
 
+        if (!gameAchievementResponse.IsSuccessStatusCode)
+            return null;
         // Response Object
         var gameAchievementObject = await gameAchievementResponse.Content
             .ReadFromJsonAsync<Steam.API.achievements.userAchievements.Achievements>();
@@ -182,6 +189,9 @@ internal static class Program
         string globalAchievementUrl = Global.SteamAPI.GetgameGlobalAchievementsUrl(appId.ToString());
         var globalAchievementResponse = await client.SendAsync(Global.Http.Get(globalAchievementUrl));
 
+        if (!globalAchievementResponse.IsSuccessStatusCode)
+            return null;
+        
         // Send request for all completion rates of the achievements for a given game
         var globalAchievementsObject = await globalAchievementResponse.Content
             .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
@@ -253,7 +263,7 @@ internal static class Program
                     Console.WriteLine($"TotalGames={games.Count()}");
                     break;
                 case 'r':
-                    Console.WriteLine($"TotalAchievements={games.Sum(g=>g.Achievements.Count)}");
+                    Console.WriteLine($"TotalAchievements={games.Sum(g=>g.Achievements.Count(a => a.Achieved))}");
                     break;
                 default:
                     Console.WriteLine("Unable to find datasheet value {0}", type);
