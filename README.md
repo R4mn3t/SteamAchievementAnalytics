@@ -27,5 +27,25 @@ Examples:
 -la [Key] [userid] -d cache.json -ds c      This will print out the total completion average.
 -lf cache.json -ds auix                     This will print out a all games and there difficulty to 100% sorted by the difficulty.
 ```
+# Adding other games to the calculation
+If you want to manually add games to the calculation, create a extra file with the following content:
+```json
+[
+  {
+    "Id":1205550,
+    "Name":"New World PTR",
+    "Achievements":133,
+    "Unlocked":52
+  },
+  {
+    "Id":1625450,
+    "Name":"Muck",
+    "Achievements":49,
+    "Unlocked":16
+  }
+]
+```
+You can add as many games as you want.
+Use `--load-external` to load this type of file!
 # Also
 The project name was probl. poorly chosen.

@@ -11,6 +11,7 @@ internal static class Program
     private static async Task Main(string[] args)
     {
         Library userLibrary = new();
+        
         for (int i = 0; i < args.Length; i++)
         {
             int cache = i; // to cache the i index in case multiple arguments are given the the procedures
@@ -41,6 +42,7 @@ internal static class Program
                             Console.WriteLine("Api return invalid values!");
                             break;
                         }
+
                         if (userLibrary.Games.Count == 0)
                             Console.WriteLine("This steam user might have no games!");
                     }
@@ -58,6 +60,29 @@ internal static class Program
                     i += 1;
                     if (!GetFromCache(args[cache + 1], out userLibrary))
                         Console.WriteLine("Unable to load file");
+                    break;
+                case "le":
+                case "-load-external":
+                    if (args.Length - i < 2)
+                        return;
+                    i += 1;
+                    if (!GetExternalGames(args[cache + 1], out ExternalGame[]  externalGames))
+                        Console.WriteLine("Unable to load external game file");
+                    foreach (ExternalGame externalGame in externalGames)
+                    {
+                        var game = new Game();
+                        game.Id = externalGame.Id;
+                        game.Name = externalGame.Name;
+                        for (int j = 0; j < externalGame.Achievements; j++)
+                        {
+                            var achievement = new Achievement();
+                            achievement.Name = "dummy" + j;
+                            achievement.Percent = 0;
+                            achievement.Achieved = j < externalGame.Unlocked;
+                            game.Achievements.Add(achievement);
+                        }
+                        userLibrary.Games.Add(game);
+                    }
                     break;
                 case "d":
                 case "-dump":
@@ -100,7 +125,14 @@ internal static class Program
         library = JsonConvert.DeserializeObject<Library>(sr.ReadToEnd()) ?? new Library();
         return !library.Equals(new Library());
     }
-
+    
+    private static bool GetExternalGames(string filePath, out ExternalGame[] externalGame)
+    {
+        using var sr = new StreamReader(filePath);
+        externalGame = JsonConvert.DeserializeObject<ExternalGame[]>(sr.ReadToEnd()) ?? Array.Empty<ExternalGame>();
+        return !externalGame.Equals(Array.Empty<ExternalGame>());
+    }
+    
     /// <summary>
     /// pull data from the steam api
     /// </summary>
@@ -135,6 +167,7 @@ internal static class Program
             return null;
 
         #endregion // Games
+
         List<Task<Game>> games = new();
         for (var index = 0; index < userGamesObject.response.games.Length; index++)
         {
@@ -154,6 +187,7 @@ internal static class Program
                 continue;
             library.Games.Add(g);
         }
+
         Console.SetCursorPosition(cursor.left, cursor.top);
         return library;
     }
@@ -191,7 +225,7 @@ internal static class Program
 
         if (!globalAchievementResponse.IsSuccessStatusCode)
             return null;
-        
+
         // Send request for all completion rates of the achievements for a given game
         var globalAchievementsObject = await globalAchievementResponse.Content
             .ReadFromJsonAsync<Steam.API.achievements.globalAchievements.Achievements>();
@@ -219,7 +253,7 @@ internal static class Program
 
         return game;
     }
-
+    
     /// <summary>
     /// uses the global library object to print out data based on <paramref name="type"/>.
     /// </summary>
@@ -263,7 +297,7 @@ internal static class Program
                     Console.WriteLine($"TotalGames={games.Count()}");
                     break;
                 case 'r':
-                    Console.WriteLine($"TotalAchievements={games.Sum(g=>g.Achievements.Count(a => a.Achieved))}");
+                    Console.WriteLine($"TotalAchievements={games.Sum(g => g.Achievements.Count(a => a.Achieved))}");
                     break;
                 default:
                     Console.WriteLine("Unable to find datasheet value {0}", type);
@@ -282,6 +316,7 @@ internal static class Program
 -h --help                               Displays this info
 -la --load-api      [apikey] [userid]   Loads user game data with the achievements from the api
 -lf --load-file     [file]              Loads user game data from a given file
+-le --load-external [file]              Loads external file to add to the library. This is for unlisted games.
 -d --dump           [file]              Dumps the user game data to a file (for -lf)
 -ds --dataset       [dataset]           Outputs data                       
 
