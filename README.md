@@ -1,4 +1,9 @@
-﻿# About
+# Just for practice
+
+I forked this project to practice C# and to add a UI to this console based application:
+
+
+# About
 This tool is suppose to help with choosing the easiest game to complete to bump the average game completion. 
 # Important
 This tool is only able to read the games you have from the steam api. 
